@@ -26,8 +26,6 @@
               packages = with pkgs;
                 [
                   gcc
-                  # cudaPackages.libcusolver
-                  # linuxPackages.nvidia_x11
                   zlib
                 ]
                 ++ (with python3.pkgs; [
@@ -35,6 +33,8 @@
                     enableGtk3 = true;
                   })
                   torch
+                  flake8
+                  black
                 ]);
 
               dotenv.disableHint = true;
