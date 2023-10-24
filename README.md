@@ -1,3 +1,5 @@
+> Archived as mxnet is no longer maintained.
+
 Crops anime wallpapers for a vertical 16:9 monitor.
 
 Uses face detection, based on:
