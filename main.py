@@ -61,13 +61,15 @@ def calculate_crop(image, boxes: list[Box]) -> tuple[Box, list[Box]]:
         boxes.sort(key=lambda box: box["xmin"])
 
         max_boxes = 0
-        xmins = []
+        # (area, xmin of box)
+        boxes_info = []
 
         for rect_left in range(width - target_width):
             rect_right = rect_left + target_width
 
             # check number of boxes in decimal within enclosed within larger rectangle
             num_boxes = 0
+            boxes_area = 0
             for box in boxes:
                 # no intersection, we overshot the final box
                 if box["xmin"] > rect_right:
@@ -79,6 +81,9 @@ def calculate_crop(image, boxes: list[Box]) -> tuple[Box, list[Box]]:
 
                 elif box["xmin"] >= rect_left and box["xmax"] <= rect_right:
                     num_boxes += 1
+                    boxes_area += (box["xmax"] - box["xmin"]) * (
+                        box["ymax"] - box["ymin"]
+                    )
                     continue
 
                 # partial intersection
@@ -86,18 +91,29 @@ def calculate_crop(image, boxes: list[Box]) -> tuple[Box, list[Box]]:
                     num_boxes += (rect_right - box["xmin"]) / (
                         box["xmax"] - box["xmin"]
                     )
+                    boxes_area += (rect_right - box["xmin"]) * (
+                        box["ymax"] - box["ymin"]
+                    )
                     continue
 
             # update max boxes
             if num_boxes > 0:
                 if num_boxes > max_boxes:
                     max_boxes = num_boxes
-                    xmins = [rect_left]
+                    boxes_info = [(boxes_area, rect_left)]
                 elif num_boxes == max_boxes:
-                    xmins.append(rect_left)
+                    boxes_info.append((boxes_area, rect_left))
 
         # get midpoint of start_x_arr
-        start_x = xmins[len(xmins) // 2]
+        # start_x = boxes_info[len(boxes_info) // 2]
+
+        boxes_info.sort()
+        # use the match with the maximum area of face coverage
+        max_box_area = boxes_info[-1][0]
+        boxes_info = [box for box in boxes_info if box[0] == max_box_area]
+
+        # get the midpoint of the box
+        start_x = boxes_info[len(boxes_info) // 2][1]
         xmin, xmax = clamp(start_x)
 
         return (
@@ -140,7 +156,15 @@ if __name__ == "__main__":
 
     vertical_wallpapers = set(f.name for f in VERT_WALLPAPER_DIR.iterdir())
 
-    for path in WALLPAPER_DIR.iterdir():
+    image_paths = WALLPAPER_DIR.iterdir()
+    # image_paths = (
+    #     WALLPAPER_DIR / f
+    #     for f in [
+    #         "wallhaven-l8dj1p.jpg",
+    #     ]
+    # )
+
+    for path in image_paths:
         # skip if already cropped
         if path.name in vertical_wallpapers:
             continue
@@ -171,7 +195,7 @@ if __name__ == "__main__":
         #     image,
         #     boxes_to_draw,
         #     # BGR
-        #     color=(0, 0, 255),
+        #     color=(0, 255, 0),
         #     thickness=3,
         # )
         # drawn_image = imutils.resize(drawn_image, height=720)
